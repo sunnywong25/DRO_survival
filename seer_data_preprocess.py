@@ -209,7 +209,8 @@ def seer_preprocess():
 
     return data_x, data_y, protect_attr
 
-# print(seer_preprocess())
+if __name__ == "__main__":
+    print(seer_preprocess())
 
 
 

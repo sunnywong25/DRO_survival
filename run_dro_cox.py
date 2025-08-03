@@ -39,7 +39,7 @@ parser.add_argument('--with_scale', type=bool, default=True, help='use scale for
 parser.add_argument('--eps', type=float, default=0.1, help='a lower bound on the group proportions e.g. {0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5}')
 parser.add_argument('--seed', type=int, default=7, help='Seed')
 parser.add_argument('--protect_index', type=int, default=0, help='protect attribute index')
-parser.add_argument('--train_or_evaluation', type=int, default=1, help='0 for training, 1 for evaluation')
+parser.add_argument('--train_or_evaluation', type=int, default=0, help='0 for training, 1 for evaluation')
 
 
 args = parser.parse_args()

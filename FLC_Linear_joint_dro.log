@@ -1,0 +1,14 @@
+Namespace(dataset='FLC', epochs=500, eps=0.15, gpuid='0', lr=0.01, model='Linear', protect_index=0, seed=7, train_or_evaluation=0, with_scale=True)
+Model Training
+Training Time: 0
+----------------------Accuracy Measures----------------------
+skSurv implemented C-index for test data:  0.7920
+integrated brier score from sksurv (percentile 100): 0.1299
+Time-dependent Area under the ROC:  0.8121
+Log partial likelihood: -6.8446
+----------------------Fairness Measures----------------------
+Concordance Imparity (CI) score (%) for test data:  0.76
+F_I individual fairness metric with scale= 0.0100:  0.0077
+F_G group fairness metric (for protect):  0.0199
+F_S intersectional fairness metric:  0.0483
+F_A average fairness metric:  0.0253

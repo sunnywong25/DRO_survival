@@ -239,4 +239,6 @@ def support_preprocess():
 
     return data_x, data_y, protect_attr
 
-# print(support_preprocess())
+if __name__ == "__main__":
+    data_X, data_y, protect_attr = support_preprocess()
+    print(np.array([y[0] for y in data_y]).mean())

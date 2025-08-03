@@ -76,5 +76,5 @@ plt.xticks(eps,eps)
 plt.legend(handles=[l1, l2,l3, l4, l5],prop={'size': 10, 'weight':'bold'}, loc='lower right')
 plt.title('{} dataset (linear setting)'.format(dataset), fontsize = 15, fontweight='bold')
 
-# plt.show()
+plt.show()
 fig.savefig('./figs/{}_sensitive_analysis.png'.format(dataset), bbox_inches='tight', pad_inches = 0)

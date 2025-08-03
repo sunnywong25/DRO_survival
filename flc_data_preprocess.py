@@ -112,4 +112,5 @@ def flc_preprocess():
     data_y['futime']=data_time
     return data_x, data_y, protect_attr
     
-# print(flc_preprocess())
+if __name__ == '__main__':
+    print(flc_preprocess())
