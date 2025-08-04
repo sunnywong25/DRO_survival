@@ -18,7 +18,9 @@ def simulate_tail_dgp(beta, beta1_shift=1.0, sigma=0.1, sim_n=200):
     
 if __name__ == "__main__":
     eval_test = lambda y, pred: 0.5*(y - pred)**2
-    
+    is_show_plot = True
+    is_save_plot = False
+
     # Simulation config
     random_state = 10
     sim_n_train = 2000
@@ -30,7 +32,7 @@ if __name__ == "__main__":
 
     # Grids
     k_candidates = [1.5, 2.0, 4.0]
-    rho_candidates = np.array([0.001, 0.01, 0.1, 0.5, 4.5])
+    rho_candidates = np.array([0.001, 0.01, 0.1, 0.5, 4.5, 10.0, 50.0])
 
     # Model training parameters
     bias = False
@@ -107,14 +109,20 @@ if __name__ == "__main__":
     plot_x = np.log(rho_candidates)/np.log(10.0)
     for i in range(len(beta)):
         plt.figure()
+        if i == 0:
+            plt.plot(plot_x, [beta1_shift + beta[0]]*len(plot_x), label = r'Shifted $\beta_{}$'.format(i+1), color='orange')
+        plt.plot(plot_x, [beta[i]]*len(plot_x), label = r'True $\beta_{}$'.format(i+1))
+        plt.plot(plot_x, beta_fitted[-1, :, i], label="ERM", marker="o", color="red")
         for k_ind, k in enumerate(k_candidates):
             plt.plot(plot_x, beta_fitted[k_ind,:,i], label = f'k = {k:.1f}', marker=marker_list[k_ind], color=color_list[k_ind])
         plt.xlabel(r'log$_{10}\rho$')
         plt.ylabel(r'$\beta_{}$'.format(i+1))
         plt.legend()
         plt.title(f"Beta {i+1}")
-        plt.savefig(f'plots/{situation}_beta{i+1}.png')
-        plt.show()
+        if is_save_plot:
+            plt.savefig(f'plots/{situation}_beta{i+1}.png', bbox_inches='tight')
+        if is_show_plot:
+            plt.show()
         plt.close()
 
     plt.figure()
@@ -127,7 +135,10 @@ if __name__ == "__main__":
     plt.ylabel('average loss')
     plt.legend()
     plt.title("Average Loss")
-    plt.savefig(f'plots/{situation}_major_vs_minor.png')
+    if is_save_plot:
+        plt.savefig(f'plots/{situation}_major_vs_minor.png', bbox_inches='tight')
+    if is_show_plot:
+        plt.show()
     plt.show()
     plt.close()
 

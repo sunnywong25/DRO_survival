@@ -1,0 +1,18 @@
+{
+    "k_candidates": [1.5, 2.0, 4.0],
+    "log10_rho_candidates": [-2.0, -1.7, -1.0, -0.3, 0.0, 0.6],
+    "sim_n_runs": 100,
+    "sim_n_train": 2000,
+    "sim_n_test": 100000,
+    "beta_major": [1.0, 1.0],
+    "beta_minor": [1.0, 0.1],
+    "sigma": 0.1,
+    "minor_prop": 0.1,
+    "random_state": 10,
+    "bias": false,
+    "epochs": 10000,
+    "lr": 0.01,
+    "verbose": false,
+    "situation": "subpop",
+    "dump_pickle_path": "C:\\Users\\Administrator\\Desktop\\DRO_survival\\dro_simulation\\data"
+}

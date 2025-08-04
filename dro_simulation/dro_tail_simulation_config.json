@@ -1,0 +1,11 @@
+{
+    "k_candidates": [1.5, 2.0, 4.0],
+    "rho_candidates": [0.001, 0.01, 0.1, 0.5, 4.5],
+    "sim_n_runs": 30,
+    "sim_n_train": 2000,
+    "n_cov": 5,
+    "sim_n_test": 100000,
+    "random_state": 10,
+    "situation": "tail",
+    "dump_pickle_path": "C:\\Users\\Administrator\\Desktop\\DRO_survival\\dro_simulation\\data"
+}

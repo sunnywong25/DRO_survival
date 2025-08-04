@@ -1,4 +1,5 @@
 import numpy as np
+import pickle
 from numpy.random import normal
 from scipy import optimize
 import torch
@@ -20,6 +21,10 @@ def threshplus_tensor(x):
     y[y<0]=0
     return y
     
+def dump_pickle(data, path):
+    with open(path, 'wb') as f:
+        pickle.dump(data, f)
+
 class LinearModel(nn.Module):
     def __init__(self, input_size, output_size, bias=True):
         super(LinearModel, self).__init__()

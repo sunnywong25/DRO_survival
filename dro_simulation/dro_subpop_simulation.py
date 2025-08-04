@@ -1,11 +1,11 @@
 import numpy as np
-
+import json
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import pickle
 from torch.autograd import Variable 
-
 from dro_models import *
 from numpy.random import normal, binomial
 
@@ -23,8 +23,11 @@ def simulate_linear_subpop_dgp(beta_major, beta_minor, sigma = 0.1, sim_n=200, G
     return sim_X, sim_y, G
 
 if __name__ == "__main__":
+    with open("C:\\Users\\Administrator\\Desktop\\DRO_survival\\dro_simulation\\dro_subpop_simulation_config.json", "r") as f:
+        sim_config = json.load(f)
+    print("Simulation config:", sim_config)
     is_show_plot = True
-    situation = 'two_subpop'
+    situation = sim_config['situation']
     marker_list = ['v', 's', '*']
     color_list = ['green', 'blue', 'black']
 
@@ -33,140 +36,85 @@ if __name__ == "__main__":
     true_test_loss = lambda beta_fitted, beta_true, sigma: 0.5 * (np.linalg.norm(beta_fitted.reshape(-1,) - beta_true)**2 + sigma**2)
     
     # Simulation config
-    random_state = 10
-    sim_n_train = 1000
-    sim_n_test = 100000
-    beta_major = np.array([1,1])
-    beta_minor = np.array([1.5,0.5])
-    sigma = 0.1
-    minor_prop = 0.1
+    dump_pickle_path = sim_config['dump_pickle_path']
+    random_state = sim_config['random_state']
+    sim_n_runs = sim_config['sim_n_runs']
+    sim_n_train = sim_config['sim_n_train']
+    sim_n_test = sim_config['sim_n_test']
+    beta_major = np.array(sim_config['beta_major'])
+    beta_minor = np.array(sim_config['beta_minor'])
+    sigma = sim_config['sigma']
+    minor_prop = sim_config['minor_prop']
     G_dist = lambda n: binomial(1, 1 - minor_prop, n)
     #G_dist = lambda n: np.random.beta(1.0, 2.0/3.0, n)
 
     # Grids
-    k_candidates = [1.5, 2.0, 4.0]
-    rho_candidates = 10**np.array([-2.0, -1.7, -1.0, -0.3, 0.0, 0.6])
+    k_candidates = sim_config['k_candidates']
+    rho_candidates = 10**np.array(sim_config['log10_rho_candidates'])
 
     # Model training parameters
-    bias = False
-    epochs = 3000 # max epochs
-    lr = 0.01
-    verbose = False
+    bias = sim_config['bias']
+    epochs = sim_config['epochs'] # max epochs
+    lr = sim_config['lr']
+    verbose = sim_config['verbose']
 
     # Initializations
     set_random_seed(random_state)
-    avg_test_loss = np.zeros((len(k_candidates), len(rho_candidates)))
-    loss_on_minor = np.zeros((len(k_candidates), len(rho_candidates)))
-    beta_fitted = np.zeros((len(k_candidates), len(rho_candidates), len(beta_major)))
-    eta_fitted = np.zeros((len(k_candidates), len(rho_candidates)))
+    avg_test_loss = np.zeros((sim_n_runs, len(k_candidates)+1, len(rho_candidates)))
+    loss_on_minor = np.zeros((sim_n_runs, len(k_candidates)+1, len(rho_candidates)))
+    beta_fitted = np.zeros((sim_n_runs, len(k_candidates)+1, len(rho_candidates), len(beta_major)))
+    eta_fitted = np.zeros((sim_n_runs, len(k_candidates), len(rho_candidates)))
 
-    # Simulation
-    # Generate datasets
-    sim_X_train, sim_y_train, G_train = simulate_linear_subpop_dgp(beta_major, beta_minor, sigma=sigma, sim_n=sim_n_train, G_dist=G_dist)
-    sim_X_test, sim_y_test, G_test = simulate_linear_subpop_dgp(beta_major, beta_minor, sigma=sigma, sim_n=sim_n_test, G_dist=G_dist)
+    for run_ind in range(sim_n_runs):
+        print(f"Run {run_ind + 1}/{sim_n_runs}")
+        # Simulation
+        # Generate datasets
+        sim_X_train, sim_y_train, G_train = simulate_linear_subpop_dgp(beta_major, beta_minor, sigma=sigma, sim_n=sim_n_train, G_dist=G_dist)
+        sim_X_test, sim_y_test, G_test = simulate_linear_subpop_dgp(beta_major, beta_minor, sigma=sigma, sim_n=sim_n_test, G_dist=G_dist)
 
-    # Convert np.array to torch.tensor if using torch implementation
-    sim_X_train_tensor = Variable((torch.from_numpy(sim_X_train)).float())
-    sim_y_train_tensor = Variable((torch.from_numpy(sim_y_train)).float())
-    sim_X_test = torch.from_numpy(sim_X_test).float()
+        # Convert np.array to torch.tensor if using torch implementation
+        sim_X_train_tensor = Variable((torch.from_numpy(sim_X_train)).float())
+        sim_y_train_tensor = Variable((torch.from_numpy(sim_y_train)).float())
+        sim_X_test = torch.from_numpy(sim_X_test).float()
 
-    # ERM baseline
-    model = LinearModel(len(beta_major), 1, bias)
-    loss_indiv = nn.MSELoss(reduction="none")
-    fit_erm(model=model, 
-            X_tensor=sim_X_train_tensor, 
-            list_of_targets=[sim_y_train_tensor], 
-            loss_indiv=loss_indiv, 
-            epochs=epochs,
-            lr=lr,
-            verbose=verbose)
-    pred_test = model(sim_X_test).detach().numpy().reshape((-1,))
-    erm_avg_test_loss = (1 - minor_prop)*true_test_loss([para.detach().numpy() for para in model.parameters()][0], beta_major, sigma)
-    erm_loss_on_minor = true_test_loss([para.detach().numpy() for para in model.parameters()][0], beta_minor, sigma)
-    erm_avg_test_loss += minor_prop*erm_loss_on_minor
+        # ERM baseline
+        model = LinearModel(len(beta_major), 1, bias)
+        loss_indiv = nn.MSELoss(reduction="none")
+        fit_erm(model=model, 
+                X_tensor=sim_X_train_tensor, 
+                list_of_targets=[sim_y_train_tensor], 
+                loss_indiv=loss_indiv, 
+                epochs=epochs,
+                lr=lr,
+                verbose=verbose)
+        pred_test = model(sim_X_test).detach().numpy().reshape((-1,))
+        test_loss_indiv = eval_test(sim_y_test.reshape(-1,), pred_test)
+        avg_test_loss[run_ind, -1, :] = test_loss_indiv.mean()
+        loss_on_minor[run_ind, -1, :] = test_loss_indiv[G_test==0].mean()
+        beta_fitted[run_ind,-1, :, :] = [para.detach().numpy() for para in model.parameters()][0]
 
-    # test_loss_indiv = eval_test(sim_y_test.reshape(-1,), pred_test)
-    # erm_avg_test_loss = test_loss_indiv.mean()
-    # erm_loss_on_minor = test_loss_indiv[G_test==0].mean()
-
-    for k_ind, k in enumerate(k_candidates):
-        for rho_ind, rho in enumerate(rho_candidates):
-            print(f"{rho:.2f}:", end = '')
-
-            # torch implementation
-            model = LinearModel(len(beta_major), 1, bias)
-            loss_indiv = nn.MSELoss(reduction="none")
-            dro_loss = DroLoss(loss_indiv, div_family_k=k, radius_rho=rho)
-            dro_loss_trace = fit_dro(model=model, 
-                                    X_tensor=sim_X_train_tensor, 
-                                    list_of_targets=[sim_y_train_tensor], 
-                                    dro_loss=dro_loss, 
-                                    epochs=epochs,
-                                    lr=lr,
-                                    verbose=verbose)
-            beta_fitted[k_ind, rho_ind, :] = [para.detach().numpy() for para in model.parameters()][0]
-            eta_fitted[k_ind, rho_ind] = [para.detach().numpy() for para in dro_loss.parameters()][0]
-            pred_test = model(sim_X_test).detach().numpy().reshape((-1,))
-            avg_test_loss[k_ind, rho_ind] = (1 - minor_prop)*true_test_loss([para.detach().numpy() for para in model.parameters()][0], beta_major, sigma)
-            loss_on_minor[k_ind, rho_ind] = true_test_loss([para.detach().numpy() for para in model.parameters()][0], beta_minor, sigma)
-            avg_test_loss[k_ind, rho_ind] += minor_prop*erm_loss_on_minor
-            # test_loss_indiv = eval_test(sim_y_test.reshape(-1,), pred_test)
-            # avg_test_loss[k_ind, rho_ind] = test_loss_indiv.mean()
-            # loss_on_minor[k_ind, rho_ind] = test_loss_indiv[G_test==0].mean()
-
-    # Plots
-    # plt.plot(plot_x, beta_fitted[:,0], label = 'beta1', color='red')
-    # plt.plot(plot_x, beta_fitted[:,1], label = 'beta2', color='green')
-    # plt.axhline(y=beta_minor[0], color='red', linestyle='--', label='minority beta1')
-    # plt.axhline(y=beta_minor[1], color='green', linestyle='--', label='minority beta2')
-    # plt.xlabel('rho')
-    # plt.ylabel('beta')
-    # plt.legend()
-    # plt.show()
-    
-    plot_x = np.log(rho_candidates)/np.log(10.0)
-    for i in range(len(beta_major)):
-        plt.figure()
-        plt.plot(plot_x, [beta_major[i]]*len(rho_candidates), label = r'True Major $\beta_{}$'.format(i+1), linestyle='--', color = 'orange')
-        plt.plot(plot_x, [beta_minor[i]]*len(rho_candidates), label = r'True Minor $\beta_{}$'.format(i+1), linestyle='--', color = 'purple')
         for k_ind, k in enumerate(k_candidates):
-            plt.plot(plot_x, beta_fitted[k_ind,:,i], label = f'k = {k:.1f}', marker=marker_list[k_ind], color=color_list[k_ind])
-        plt.xlabel(r'log$_{10}\rho$')
-        plt.ylabel(r'$\beta_{}$'.format(i+1))
-        plt.legend()
-        plt.title(f"Beta {i+1}")
-        if is_show_plot:
-            plt.show()
-        else:
-            plt.savefig(f'plots/{situation}_beta{i+1}.png')
-        plt.close()
-    
-    plt.figure()
-    plt.plot(plot_x, [erm_avg_test_loss]*len(rho_candidates), label = 'ERM', marker='o', color = 'red')
-    for k_ind, k in enumerate(k_candidates):
-        plt.plot(plot_x, avg_test_loss[k_ind,:], label = f'k = {k:.1f}', marker=marker_list[k_ind], color = color_list[k_ind])
-    plt.xlabel(r'log$_{10}\rho$')
-    plt.ylabel('average loss')
-    plt.ylim((0.0, 0.35))
-    plt.legend()
-    plt.title("Average Loss")
-    if is_show_plot:
-        plt.show()
-    else:
-        plt.savefig(f'plots/{situation}_average_loss.png')
-    plt.close()
+            for rho_ind, rho in enumerate(rho_candidates):
+                print(f"{rho:.2f}:", end = '')
 
-    plt.figure()
-    plt.plot(plot_x, [erm_loss_on_minor]*len(rho_candidates), label = 'ERM', marker='o', color = 'red')
-    for k_ind, k in enumerate(k_candidates):
-        plt.plot(plot_x, loss_on_minor[k_ind,:], label = f'k = {k:.1f}', marker=marker_list[k_ind], color = color_list[k_ind])
-    plt.xlabel(r'log$_{10}\rho$')
-    plt.ylabel('loss on minority')
-    plt.ylim(bottom=0.0)
-    plt.legend()
-    plt.title('Loss on Minority')
-    if is_show_plot:
-        plt.show()
-    else:
-        plt.savefig(f'plots/{situation}_loss_on_minority.png')
-    plt.close()
+                # torch implementation
+                model = LinearModel(len(beta_major), 1, bias)
+                loss_indiv = nn.MSELoss(reduction="none")
+                dro_loss = DroLoss(loss_indiv, div_family_k=k, radius_rho=rho)
+                dro_loss_trace = fit_dro(model=model, 
+                                        X_tensor=sim_X_train_tensor, 
+                                        list_of_targets=[sim_y_train_tensor], 
+                                        dro_loss=dro_loss, 
+                                        epochs=epochs,
+                                        lr=lr,
+                                        verbose=verbose)
+                beta_fitted[run_ind,k_ind, rho_ind, :] = [para.detach().numpy() for para in model.parameters()][0]
+                eta_fitted[run_ind,k_ind, rho_ind] = [para.detach().numpy() for para in dro_loss.parameters()][0]
+                pred_test = model(sim_X_test).detach().numpy().reshape((-1,))
+                test_loss_indiv = eval_test(sim_y_test.reshape(-1,), pred_test)
+                avg_test_loss[run_ind,k_ind, rho_ind] = test_loss_indiv.mean()
+                loss_on_minor[run_ind,k_ind, rho_ind] = test_loss_indiv[G_test==0].mean()
+    
+    for name in ['avg_test_loss', 'loss_on_minor', 'beta_fitted', 'eta_fitted']:
+        dump_pickle(eval(name), f'{dump_pickle_path}/{situation}_{name}.pkl')
+        print(f"Dumped {name} to data/situation_{name}.pkl")
